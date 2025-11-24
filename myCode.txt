@@ -1,0 +1,131 @@
+import random
+import string
+
+def create_substitution_alphabet():
+    original = list(string.ascii_letters + string.digits + string.punctuation)
+    shuffled = original[:]
+    random.shuffle(shuffled)
+    return dict(zip(original, shuffled))
+
+def invert_substitution_alphabet(substitution_alphabet):
+    return {v: k for k, v in substitution_alphabet.items()}
+
+def encrypt_substitution(plaintext, substitution_alphabet):
+    return ''.join(substitution_alphabet.get(char, char) for char in plaintext)
+
+def decrypt_substitution(ciphertext, inverse_alphabet):
+    return ''.join(inverse_alphabet.get(char, char) for char in ciphertext)
+
+def reverse_string(s):
+    return s[::-1]
+
+def insert_random_characters(ciphertext, num_chars=5):
+    positions = sorted(random.sample(range(len(ciphertext)+1), num_chars))
+    random_chars = [random.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(num_chars)]
+    for pos, char in zip(positions, random_chars):
+        ciphertext = ciphertext[:pos] + char + ciphertext[pos:]
+    return ciphertext, positions
+
+def remove_random_characters(ciphertext, positions):
+    for pos in sorted(positions, reverse=True):
+        ciphertext = ciphertext[:pos] + ciphertext[pos+1:]
+    return ciphertext
+
+def transpose_blocks(ciphertext, key):
+    block_size = len(key)
+    blocks = [ciphertext[i:i+block_size] for i in range(0, len(ciphertext), block_size)]
+    transposed = []
+    
+    for block in blocks:
+        transposed_block = [''] * block_size
+        for i in range(len(block)):
+            if i < len(key):
+                transposed_block[key[i]] = block[i]
+        transposed.append(''.join(transposed_block))
+    
+    return ''.join(transposed)
+
+def invert_key(key):
+    inverted_key = [0] * len(key)
+    for i, k in enumerate(key):
+        inverted_key[k] = i
+    return inverted_key
+
+def encrypt_message(plaintext):
+    # Step 1: Substitution
+    substitution_alphabet = create_substitution_alphabet()
+    ciphertext = encrypt_substitution(plaintext, substitution_alphabet)
+    
+    # Step 2: Reverse the ciphertext
+    reversed_ciphertext = reverse_string(ciphertext)
+    
+    # Step 3: Insert random characters
+    key = list(range(5))  # Example key for transposition
+    random.shuffle(key)
+    randomized_ciphertext, positions = insert_random_characters(reversed_ciphertext)
+    
+    # Step 4: Transpose blocks
+    final_ciphertext = transpose_blocks(randomized_ciphertext, key)
+    
+    return final_ciphertext, substitution_alphabet, key, positions
+
+def decrypt_message(ciphertext, substitution_alphabet, key, positions):
+    # Step 1: Invert the key
+    inverted_key = invert_key(key)
+    
+    # Step 2: Reverse transpose blocks
+    reversed_transposed = transpose_blocks(ciphertext, inverted_key)
+    
+    # Step 3: Remove random characters
+    cleaned_ciphertext = remove_random_characters(reversed_transposed, positions)
+    
+    # Step 4: Reverse the string
+    reversed_string = reverse_string(cleaned_ciphertext)
+    
+    # Step 5: Invert substitution
+    inverse_alphabet = invert_substitution_alphabet(substitution_alphabet)
+    plaintext = decrypt_substitution(reversed_string, inverse_alphabet)
+    
+    return plaintext
+
+# Main function to choose encryption or decryption
+print("\t\tTAILORED CIPHER\n")
+def main():
+    while True:
+        choice = input("\t 1. ENCRYPTION \n\t 2. DECRYPTION\n==> ").strip()
+
+        if choice == '1':
+            plaintext = input("Enter the plaintext message to encrypt: ")
+            encrypted_message, alphabet, key, positions = encrypt_message(plaintext)
+            print("\n--- Encryption Details ---")
+            print("Encrypted Message:", encrypted_message)
+            print("Substitution Alphabet:", alphabet)
+            print("Transposition Key:", key)
+            print("Positions of Random Characters:", positions)
+
+        elif choice == '2':
+            ciphertext = input("Enter the ciphertext message to decrypt: ")
+            substitution_alphabet_str = input("Enter the substitution alphabet dictionary (as a Python dict): ")
+            key_str = input("Enter the transposition key (as a Python list): ")
+            positions_str = input("Enter the positions of random characters (as a Python list): ")
+
+            # Convert strings back to their respective types
+            substitution_alphabet = eval(substitution_alphabet_str)
+            key = eval(key_str)
+            positions = eval(positions_str)
+
+            decrypted_message = decrypt_message(ciphertext, substitution_alphabet, key, positions)
+            print("\n--- Decryption Details ---")
+            print("Decrypted Message:", decrypted_message)
+
+        else:
+            print("Invalid choice. Please enter 1 for encryption or 2 for decryption.")
+
+        # Ask the user if they want to continue
+        continue_choice = input("\nWould you like to continue? (yes or no): ").strip().lower()
+        if continue_choice == 'no':
+            print("Program exited, Thank You!")
+            break
+
+# Run the main function
+main()
